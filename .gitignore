@@ -1,0 +1,87 @@
+# Environment variables
+.env
+.env.local
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.dockerignore
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Results (optional - keep committed for now)
+# results/
+
+# Large files (don't upload to GitHub)
+*.csv
+*.npz
+*.pkl
+*.pt
+*.pth
+dataset/*.csv
+!dataset/.gitkeep
+checkpoints/**/*.pt
+checkpoints/**/*.pkl
+!checkpoints/.gitkeep
+
+# Internal documentation (keep user-facing guides)
+PHASE*_SUMMARY.md
+PHASE*_COMPLETION*.md
+tasks.md
+GITHUB_UPLOAD_GUIDE.md
+PHASE7_LOCAL_DEPLOYMENT_GUIDE.md
+
+# AI Assistant files (local only)
+.agents/
+.claude/
+
+# Keep these user-facing docs:
+# - README.md
+# - API_DOCUMENTATION.md
+# - deployment/DEPLOYMENT_GUIDE.md
+# - CLAUDE.md
+
+# OS
+Thumbs.db

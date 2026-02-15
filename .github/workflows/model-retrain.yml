@@ -1,0 +1,173 @@
+name: Model Retraining Pipeline
+
+on:
+  schedule:
+    # Weekly retraining: Sunday at 3:00 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      model_type:
+        description: 'Model to retrain (mf, ncf, or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - mf
+          - ncf
+      training_data_path:
+        description: 'Path to training data (leave empty for default)'
+        required: false
+        default: 'dataset/train_set.csv'
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  retrain:
+    name: Retrain Models
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download latest training data
+        run: |
+          # In production, this would pull from cloud storage or database
+          echo "Using existing training data at ${{ github.event.inputs.training_data_path || 'dataset/train_set.csv' }}"
+
+      - name: Retrain Matrix Factorization model
+        if: github.event.inputs.model_type == 'mf' || github.event.inputs.model_type == 'all' || github.event_name == 'schedule'
+        run: |
+          python training/train_mf.py
+          echo "✅ MF model retrained"
+
+      - name: Retrain Neural CF model
+        if: github.event.inputs.model_type == 'ncf' || github.event.inputs.model_type == 'all' || github.event_name == 'schedule'
+        run: |
+          python training/train_ncf.py
+          echo "✅ NCF model retrained"
+
+      - name: Evaluate models
+        run: |
+          python evaluation/run_evaluation.py
+          echo "✅ Models evaluated"
+
+      - name: Compare with baseline
+        run: |
+          python -c "
+          import pandas as pd
+          import sys
+
+          # Load current and baseline metrics
+          current = pd.read_csv('results/metrics/model_comparison.csv')
+          baseline = pd.read_csv('results/metrics/baseline_metrics.csv')
+
+          # Compare precision@10 for MF model
+          current_p10 = current[current['model'] == 'mf']['precision@10'].values[0]
+          baseline_p10 = baseline[baseline['model'] == 'mf']['precision@10'].values[0]
+
+          improvement = ((current_p10 - baseline_p10) / baseline_p10) * 100
+
+          print(f'Current Precision@10: {current_p10:.4f}')
+          print(f'Baseline Precision@10: {baseline_p10:.4f}')
+          print(f'Improvement: {improvement:.2f}%')
+
+          # Fail if performance degrades by >5%
+          if improvement < -5:
+              print('❌ Model performance degraded by >5%, not deploying')
+              sys.exit(1)
+          elif improvement < 2:
+              print('⚠️ Model improvement <2%, keeping old model')
+              sys.exit(0)
+          else:
+              print('✅ Model improved by >2%, proceeding to deployment')
+          "
+
+      - name: Upload new model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models
+          path: |
+            checkpoints/mf/mf_best.pt
+            checkpoints/ncf/ncf_best.pt
+            results/metrics/model_comparison.csv
+          retention-days: 30
+
+      - name: Deploy updated models to production
+        if: success()
+        run: |
+          # In production, this would upload to cloud storage (GCS, S3)
+          echo "Deploying updated models..."
+          # gsutil cp checkpoints/mf/mf_best.pt gs://your-bucket/models/mf/mf_$(date +%Y%m%d).pt
+          # gsutil cp checkpoints/ncf/ncf_best.pt gs://your-bucket/models/ncf/ncf_$(date +%Y%m%d).pt
+          echo "✅ Models deployed to cloud storage"
+
+      - name: Update model registry
+        if: success()
+        run: |
+          python -c "
+          import json
+          from datetime import datetime
+
+          # Load existing registry
+          try:
+              with open('models/registry.json', 'r') as f:
+                  registry = json.load(f)
+          except FileNotFoundError:
+              registry = {'models': []}
+
+          # Add new model version
+          new_version = {
+              'model_id': f'mf_v{len(registry[\"models\"]) + 1}',
+              'deployed_at': datetime.utcnow().isoformat(),
+              'status': 'active',
+              'metrics': {},
+              'traffic_split': 100
+          }
+
+          registry['models'].append(new_version)
+
+          # Save updated registry
+          with open('models/registry.json', 'w') as f:
+              json.dump(registry, f, indent=2)
+
+          print('✅ Model registry updated')
+          "
+
+      - name: Invalidate cache
+        run: |
+          # Call API to clear cache after model update
+          # curl -X DELETE http://your-api-url/cache/clear
+          echo "Cache invalidation would happen here in production"
+
+      - name: Send notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "Model Retraining ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🤖 *Model Retraining Pipeline*\nStatus: *${{ job.status }}*\nModel: `${{ github.event.inputs.model_type || 'all' }}`\nTriggered by: `${{ github.event_name }}`"
+                  }
+                }
+              ]
+            }

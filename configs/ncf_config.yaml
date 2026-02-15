@@ -1,0 +1,54 @@
+# Neural Collaborative Filtering Model Configuration
+
+model:
+  name: "NeuralCF"
+
+  # GMF path
+  gmf_embedding_dim: 64
+
+  # MLP path
+  mlp_embedding_dim: 32
+  mlp_hidden_layers: [128, 64, 32]  # Dense layer sizes
+  dropout: 0.2
+
+  # Fusion
+  use_pretrain: false  # Set to true if using pretrained GMF/MLP
+
+training:
+  batch_size: 512
+  learning_rate: 0.001
+  weight_decay: 0.00001  # Very small L2 for deep model
+  max_epochs: 30
+  early_stopping_patience: 3
+  validation_split: 0.1
+  gradient_clip_max_norm: 5.0
+  use_negative_sampling: true
+  negative_ratio: 4  # 4 negatives per positive
+
+optimizer:
+  name: "Adam"
+  betas: [0.9, 0.999]
+  eps: 1.0e-08
+
+loss:
+  name: "BCELoss"  # Binary Cross Entropy for implicit feedback
+
+evaluation:
+  k_values: [5, 10, 20]
+  metrics:
+    - precision@k
+    - recall@k
+    - ndcg@k
+    - hit_rate@k
+    - map@k
+    - coverage
+    - diversity
+    - novelty
+
+checkpointing:
+  save_best: true
+  metric_to_track: "ndcg@10"
+  mode: "max"
+  checkpoint_dir: "checkpoints/ncf"
+
+random_seed: 42

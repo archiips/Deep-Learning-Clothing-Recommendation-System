@@ -1,0 +1,42 @@
+# Matrix Factorization Model Configuration
+
+model:
+  name: "MatrixFactorization"
+  embedding_dim: 64  # Dimensionality of user/item embeddings
+  use_bias: true     # Include user/item biases
+
+training:
+  batch_size: 256
+  learning_rate: 0.001
+  weight_decay: 0.01  # L2 regularization
+  max_epochs: 20
+  early_stopping_patience: 3
+  validation_split: 0.1
+
+optimizer:
+  name: "Adam"
+  betas: [0.9, 0.999]
+  eps: 1.0e-08
+
+loss:
+  name: "MSELoss"  # Mean Squared Error for explicit ratings
+
+evaluation:
+  k_values: [5, 10, 20]
+  metrics:
+    - precision@k
+    - recall@k
+    - ndcg@k
+    - hit_rate@k
+    - map@k
+    - coverage
+    - diversity
+    - novelty
+
+checkpointing:
+  save_best: true
+  metric_to_track: "ndcg@10"
+  mode: "max"
+  checkpoint_dir: "checkpoints/mf"
+
+random_seed: 42

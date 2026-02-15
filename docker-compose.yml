@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: recsys-api
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - recsys-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: recsys-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - recsys-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: recsys-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=recommendations
+      - POSTGRES_USER=recsys_user
+      - POSTGRES_PASSWORD=change_this_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - recsys-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  recsys-network:
+    driver: bridge
