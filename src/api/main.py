@@ -37,6 +37,14 @@ from src.api.schemas import (
 )
 from src.api.business_rules import apply_business_rules, get_item_metadata
 from src.api.cache import get_cache, RecommendationCache
+from src.api.metrics import (
+    metrics_endpoint,
+    track_cache_hit,
+    track_cache_miss,
+    track_recommendation,
+    track_prediction,
+    models_loaded as models_loaded_metric
+)
 
 # Load environment variables
 load_dotenv()
@@ -75,6 +83,9 @@ async def lifespan(app: FastAPI):
         }
 
         logger.info(f"✅ Loaded {len(models)} models successfully")
+
+        # Update Prometheus metric
+        models_loaded_metric.set(len(models))
 
         # Load mappings
         logger.info("Loading user/item mappings...")
@@ -217,6 +228,22 @@ async def list_models():
     )
 
 
+@app.get("/metrics", tags=["Monitoring"])
+async def get_metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Exposes metrics for monitoring:
+    - Request count and latency
+    - Cache hit/miss rates
+    - Model prediction counts
+    - Error rates
+
+    This endpoint is scraped by Prometheus every 10 seconds.
+    """
+    return metrics_endpoint()
+
+
 @app.post("/recommend", response_model=RecommendationResponse, tags=["Recommendations"])
 async def get_recommendations(request: RecommendationRequest):
     """
@@ -256,6 +283,7 @@ async def get_recommendations(request: RecommendationRequest):
 
         if cached_recommendations is not None:
             logger.info(f"Cache HIT for user {request.user_id}")
+            track_cache_hit("redis")
             return RecommendationResponse(
                 user_id=request.user_id,
                 recommendations=[RecommendationItem(**item) for item in cached_recommendations],
@@ -265,6 +293,11 @@ async def get_recommendations(request: RecommendationRequest):
             )
 
         logger.info(f"Cache MISS for user {request.user_id}, generating recommendations")
+        track_cache_miss("redis")
+
+        # Track recommendation generation time
+        import time
+        start_time = time.time()
 
         # Get model
         model = models[model_to_use]
@@ -336,6 +369,10 @@ async def get_recommendations(request: RecommendationRequest):
             department=request.department,
             ttl=3600  # 1 hour TTL
         )
+
+        # Track recommendation metrics
+        duration = time.time() - start_time
+        track_recommendation(model_to_use, duration)
 
         # Return response
         return RecommendationResponse(
