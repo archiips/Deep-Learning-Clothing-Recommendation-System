@@ -340,38 +340,3 @@ Contributions are welcome! Please:
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Archit Jaiswal**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
-
-## 🙏 Acknowledgments
-
-- Dataset: Women's E-Commerce Clothing Reviews (Public Domain)
-- Inspiration: Production ML systems and recommender systems research
-- Tools: PyTorch, FastAPI, Docker, Google Cloud Platform
-
-## 🚀 Next Steps
-
-### Immediate
-- [ ] Deploy to GCP Cloud Run
-- [ ] Set up monitoring dashboards (Grafana)
-- [ ] Configure custom domain
-
-### Future Enhancements
-- [ ] Add user authentication
-- [ ] Implement A/B testing framework
-- [ ] Add recommendation explanations
-- [ ] Optimize model inference with TorchScript
-- [ ] Add multi-modal features (images, text)
-
----
-
-**Project Status:** 🚀 **PRODUCTION READY**
-
-For questions or issues, please open an issue on GitHub.
-
-*Last Updated: February 15, 2026*
