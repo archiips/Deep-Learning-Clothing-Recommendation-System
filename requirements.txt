@@ -22,7 +22,7 @@ python-dotenv==1.0.1
 
 # Caching (optional for advanced deployment)
 redis==5.0.0
-hiredis==2.3.0
+hiredis==2.3.2
 
 # Database (optional for logging)
 psycopg2-binary==2.9.9
